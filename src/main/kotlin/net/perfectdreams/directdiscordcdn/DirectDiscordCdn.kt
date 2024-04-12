@@ -8,6 +8,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -17,13 +18,22 @@ fun main() {
     val server = embeddedServer(Netty, port = 8080) {
         routing {
             // Example: https://cdn.discordapp.com/attachments/547119872568459284/1033477554612478063/lori_profile.png
-            get("/attachments/{id}/{id2}/{file}") {
+            get("/{type}/{id}/{id2}/{file}") {
+                val type = call.parameters["type"]
+                if (type != "attachments" && type != "ephemeral-attachments") {
+                    call.respondText(
+                        "Not an attachment!",
+                        status = HttpStatusCode.UnprocessableEntity,
+                    )
+                    return@get
+                }
                 val id = call.parameters["id"]
                 val id2 = call.parameters["id2"]
                 val file = call.parameters["file"]
                 val fileExtension = file?.substringAfterLast(".")
 
-                val originalFileResponse = http.get("https://cdn.discordapp.com/attachments/$id/$id2/$file")
+                println(call.request.queryString())
+                val originalFileResponse = http.get("https://cdn.discordapp.com/$type/$id/$id2/$file?${call.request.queryString()}")
                 val bytes = originalFileResponse.readBytes()
 
                 call.respondBytes(
